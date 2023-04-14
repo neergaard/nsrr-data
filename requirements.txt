@@ -1,0 +1,7 @@
+librosa>=0.10.0
+mne>=1.0.3
+numpy>=1.23.5
+ruby
+scikit-learn>=1.2.2
+pytorch>=1.13.1
+pytorch-lightning>=2.0.0
