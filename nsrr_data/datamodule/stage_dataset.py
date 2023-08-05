@@ -62,8 +62,8 @@ class SleepStageDataset(Dataset):
         self.scalers = []
 
         if self.records is not None:
-            # logger.info(f"Prefetching study metadata using {self.n_jobs} workers:")
-            sorted_data = ParallelExecutor(n_jobs=-4, prefer="processes")(total=len(self.records))(
+            logger.info(f"Prefetching study metadata using {self.n_jobs} workers:")
+            sorted_data = ParallelExecutor(n_jobs=self.n_jobs, prefer="threads")(total=len(self.records))(
                 delayed(get_metadata)(filename=record, sequence_length=self.sequence_length)
                 for record in set(self.records)
             )
@@ -79,16 +79,15 @@ class SleepStageDataset(Dataset):
         return len(self.index_to_record)
 
     def __getitem__(self, idx):
-
         record = self.index_to_record[idx]["record"]
         window_index = self.index_to_record[idx]["window_idx"]
         # window_start =   # self.index_to_record[idx]["window_start"]
 
         # Load specific channels and location
-        signal = load_waveforms(self.metadata[record]["filename"], self.picks, window=window_index)
+        signal = load_waveforms(self.metadata[record]["filename"], self.picks, window=window_index, scaled=False)
 
         # Get valid stages
-        stages = self.stages[record][::30][window_index]
+        stages = self.stages[record][window_index]
 
         # Optionally transform the signal
         if self.transform is not None:
@@ -102,12 +101,10 @@ class SleepStageDataset(Dataset):
 
 
 def get_record_metadata(filename: str, sequence_length: int):
-
     # Get signal metadata
     with File(filename, "r") as h5:
-
         # Get the waveforms and shape info
-        N, C, T = h5["data"]["scaled"].shape
+        N, C, T = h5["data"]["unscaled"].shape
         stages = h5["stages"][:]
 
         # Set metadata

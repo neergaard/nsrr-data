@@ -1,5 +1,6 @@
 import argparse
 import sys
+from pathlib import Path
 
 from nsrr_data.preprocessing.process_functions import process_fns
 from nsrr_data.utils.logger import get_logger
@@ -9,17 +10,15 @@ logger = get_logger()
 
 
 def process_cohort(cohort, *args, **kwargs):
-
     process_fns[cohort](*args, **kwargs)
 
 
 if __name__ == "__main__":
-
     # fmt: off
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--cohort', type=str, required=True, choices=AVAILABLE_COHORTS, help='Available cohorts.')
-    parser.add_argument("-d", "--data_dir", type=str, required=True, help="Path to EDF data.")
-    parser.add_argument("-o", "--output_dir", type=str, default=None, help="Where to store H5 files.")
+    parser.add_argument("-d", "--data_dir", type=Path, required=True, help="Path to EDF data.")
+    parser.add_argument("-o", "--output_dir", type=Path, default=True, help="Where to store H5 files.")
     parser.add_argument("--fs", type=int, default=128, help="Desired resampling frequency.")
     parser.add_argument("--subjects", type=int, default=None, help='Number of subjects to process. If None, all are processed.')
     parser.add_argument('--splits', type=int, default=1, help="If processing on multiple computers, use this parameter to control the total number of splits.")

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, List, Optional, Union
 
 import torch
 from pytorch_lightning import LightningDataModule
@@ -46,7 +46,7 @@ class SleepStageDataModule(LightningDataModule):
     fs: int = None
     n_jobs: int = None
     n_records: int = None
-    picks: list = None
+    picks: Optional[List[str]] = None
     transform: Callable = None
     scaling: str = None
 
@@ -55,7 +55,6 @@ class SleepStageDataModule(LightningDataModule):
     num_workers: int = 0
 
     def __post_init__(self) -> None:
-
         self.data_dir = Path(self.data_dir).resolve()
         partitions = get_train_validation_test(
             self.data_dir,
@@ -80,9 +79,11 @@ class SleepStageDataModule(LightningDataModule):
             transform=self.transform,
             scaling=self.scaling,
         )
+        self.save_hyperparameters(
+            ignore=["train_records", "eval_records", "test_records", "example_input_array", "dataset_kwargs"]
+        )
 
     def setup(self, stage: Optional[str] = "fit") -> None:
-
         self.train = SleepStageDataset(self.train_records, **self.dataset_kwargs)
         self.eval = SleepStageDataset(self.eval_records, **self.dataset_kwargs)
         self.test = SleepStageDataset(self.test_records, **self.dataset_kwargs)
@@ -120,7 +121,6 @@ class SleepStageDataModule(LightningDataModule):
 
 
 if __name__ == "__main__":
-
     dm = SleepStageDataModule("data/mros/processed")
     print(repr(dm))
     print(dm)

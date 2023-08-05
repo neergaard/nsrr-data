@@ -8,11 +8,9 @@ EVENT_CODES = {"ar": 0, "lm": 1, "sdb": 2}
 
 
 def get_record_metadata(filename: str, events: dict, fs: int, window_size: int = None):
-
     event_data = {k: {"data": None, "label": None, "name": None} for k in events.keys()}
     # Get signal metadata
     with File(filename, "r") as h5:
-
         # This gets the event data
         events_in_file = h5["events"].keys()
         for event in events.keys():
@@ -33,7 +31,7 @@ def get_record_metadata(filename: str, events: dict, fs: int, window_size: int =
         # Get the waveforms and shape info
         # waveforms = h5["data"]["scaled"]
         # waveforms = np.stack([w for w in waveforms.values()])
-        N, C, T = h5["data"]["scaled"].shape
+        N, C, T = h5["data"]["unscaled"].shape
         # N = T // window_size if window_size is not None else 1
         stages = h5["stages"][:]
 
@@ -78,7 +76,6 @@ def get_record_metadata(filename: str, events: dict, fs: int, window_size: int =
 
 
 def load_waveforms(filename: str, picks: list = None, scaled: bool = True, window: Union[int, slice] = None):
-
     if picks is None:
         picks = ["c3", "c4", "eogl", "eogr", "chin", "legl", "legr", "nasal", "abdo", "thor"]
 

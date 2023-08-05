@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 from typing import Literal, Optional
 
 import h5py
@@ -52,6 +53,7 @@ EXTRACTED_CHANNELS = [
     "RChin",
     "LegL",
     "LegR",
+    # "Airflow",
     "NasalP",
     "Thor",
     "Abdo",
@@ -63,11 +65,12 @@ eog_filter = ButterworthFilter(order=2, fc=[0.3, 35], type="band")
 emg_filter = ButterworthFilter(order=4, fc=[10], type="highpass")
 nasal_filter = ButterworthFilter(order=4, fc=[0.03], type="highpass")
 belt_filter = ButterworthFilter(order=2, fc=[0.1, 15], type="band")
-signal_labels_json_path = "data/montage_code/montage_code.json"
-assert os.path.exists(signal_labels_json_path)
-with open(signal_labels_json_path, "r") as (f):
-    channel_dict = json.load(f)
-channel_categories = channel_dict["categories"]
+signal_labels_json_path = Path("nsrr_data/preprocessing/montage/mros.json")
+# assert os.path.exists(signal_labels_json_path)
+if signal_labels_json_path.exists():
+    with open(signal_labels_json_path, "r") as (f):
+        channel_dict = json.load(f)
+    channel_categories = channel_dict["categories"]
 channel_filters = {
     "C3": eeg_filter,
     "C4": eeg_filter,
@@ -111,7 +114,6 @@ def process_file(
     overlap: Optional[float] = None,
     event_type: Optional[Literal["ar", "lm", "sdb"]] = None,
 ):
-
     assert (duration is None and overlap is None) or (
         duration is not None and overlap is not None
     ), f"'duration' and 'overlap' params must both be specified or None, received 'duration'={duration} and 'overlap'={overlap}."
@@ -202,12 +204,21 @@ def process_file(
 
         # Save sleep stages in dense format.
         # Here, we map {W, N1, N2, N3, R} to {0, 1, 2, 3, 4}
-        stage_dict = {"Wake": 0, "Stage 1": 1, "Stage 2": 2, "Stage 3": 3, "Stage 4": 3, "REM": 4}
+        stage_dict = {
+            "Wake": 0,
+            "Stage 1": 1,
+            "Stage 2": 2,
+            "Stage 3": 3,
+            "Stage 4": 3,
+            "REM": 4,
+            "MOVEMENT": 7,
+            "UNKNOWN": 7,
+            "Unscored": 7,
+        }
         stages_dense = np.concatenate([np.repeat(stage_dict[s[0]], s[-1]) for s in stages])
         h5.create_dataset(f"stages", data=stages_dense)
 
         if (duration is None) and (overlap is None):
-
             for chn in data.keys():
                 x_scaled = RobustScaler().fit_transform(data[chn].T).T
 
@@ -264,7 +275,6 @@ def process_file(
 def process_mros(
     data_dir: str, output_dir: str, fs: int, subjects: Optional[int], splits: int, current_split: int, *args, **kwargs
 ):
-
     logger.info("Converting EDF and annotations to standard H5 file")
     logger.info(f"Input directory (EDF and annotation file location): {data_dir}")
     logger.info(f"Output directory (H5 file location): {output_dir}")

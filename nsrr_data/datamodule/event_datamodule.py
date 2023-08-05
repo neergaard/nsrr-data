@@ -7,7 +7,8 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 
 from nsrr_data.datamodule.event_dataset import SleepEventDataset
-from nsrr_data.utils import collate, get_train_validation_test
+from nsrr_data.utils.collate_fn import collate
+from nsrr_data.utils.partitioning import get_train_validation_test
 from nsrr_data.utils.default_event_matching import get_overlapping_default_events
 
 
@@ -68,7 +69,6 @@ class SleepEventDataModule(LightningDataModule):
     num_workers: int = 0
 
     def __post_init__(self) -> None:
-
         self.data_dir = Path(self.data_dir).resolve()
         partitions = get_train_validation_test(
             self.data_dir,
@@ -107,7 +107,6 @@ class SleepEventDataModule(LightningDataModule):
         )
 
     def setup(self, stage: Optional[str] = "fit") -> None:
-
         if stage == "fit":
             self.train = SleepEventDataset(self.train_records, **self.dataset_kwargs)
             self.eval = SleepEventDataset(self.eval_records, **self.dataset_kwargs)
@@ -148,7 +147,6 @@ class SleepEventDataModule(LightningDataModule):
 
 
 if __name__ == "__main__":
-
     dm = SleepEventDataModule("data/mros/processed")
     print(repr(dm))
     print(dm)

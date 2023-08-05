@@ -116,7 +116,7 @@ def getAllChannelLabelsWithCounts(edfFiles):
         def func(fp):
             return getChannelLabels(fp)
 
-        output = ParallelExecutor(n_jobs=-1, prefer="threads")(total=len(edfFiles))(
+        output = ParallelExecutor(n_jobs=-2, prefer="processes")(total=len(edfFiles))(
             delayed(func)(edfFile) for edfFile in edfFiles
         )
         label_set_counts = Counter([l2 for l1 in output for l2 in l1])
@@ -160,7 +160,6 @@ def run(args):
         print()
 
         if len(channelsToID) > 0:
-
             toFile = {}  # dict()
             toFile["pathname"] = path2check  # a string
             toFile["edfFiles"] = edfFiles  # a list
