@@ -5,6 +5,7 @@ from typing import Callable, Dict, List, Optional
 
 import numpy as np
 from h5py import File
+from einops import rearrange
 from joblib import Memory, delayed
 from sklearn import preprocessing
 from torch.utils.data import Dataset
@@ -64,7 +65,7 @@ class SleepStageDataset(Dataset):
         if self.records is not None:
             logger.info(f"Prefetching study metadata using {self.n_jobs} workers:")
             sorted_data = ParallelExecutor(n_jobs=self.n_jobs, prefer="threads")(total=len(self.records))(
-                delayed(get_metadata)(filename=record, sequence_length=self.sequence_length)
+                delayed(get_metadata)(filename=record, sequence_length=self.sequence_length, scaling=self.scaling)
                 for record in set(self.records)
             )
             logger.info("Prefetching finished")
@@ -74,6 +75,14 @@ class SleepStageDataset(Dataset):
         self.index_to_record = [sub for s in sorted_data for sub in s["index_to_record"][1]]
         self.metadata = dict([s["metadata"] for s in sorted_data])
         self.stages = dict([s["stages"] for s in sorted_data])
+        self.scaler = dict([s['scaler'] for s in sorted_data])
+        self.label_key = {
+            0: 'Wake',
+            1: 'N1',
+            2: 'N2',
+            3: 'N3',
+            4: 'REM'
+        }
 
     def __len__(self):
         return len(self.index_to_record)
@@ -85,6 +94,15 @@ class SleepStageDataset(Dataset):
 
         # Load specific channels and location
         signal = load_waveforms(self.metadata[record]["filename"], self.picks, window=window_index, scaled=False)
+        N, C, T = signal.shape
+
+        # Potentially scale data
+        if self.scaler[record]:
+            signal = rearrange(
+                self.scaler[record].transform(
+                    rearrange(signal, 'N C T -> (T N) C')
+                ), '(T N) C -> N C T'
+            )
 
         # Get valid stages
         stages = self.stages[record][window_index]
@@ -100,12 +118,20 @@ class SleepStageDataset(Dataset):
         }
 
 
-def get_record_metadata(filename: str, sequence_length: int):
+def get_record_metadata(filename: str, sequence_length: int, scaling: Optional[str] = None):
     # Get signal metadata
     with File(filename, "r") as h5:
         # Get the waveforms and shape info
         N, C, T = h5["data"]["unscaled"].shape
         stages = h5["stages"][:]
+
+        # Possibly get scaling object
+        if scaling:
+            scaler = SCALERS[scaling].fit(
+                rearrange(h5['data']['unscaled'][:], 'N C T -> (T N) C')
+            )
+        else:
+            scaler = None
 
         # Set metadata
         index_to_record = [
@@ -118,4 +144,5 @@ def get_record_metadata(filename: str, sequence_length: int):
         index_to_record=(filename.stem, index_to_record),
         metadata=(filename.stem, metadata),
         stages=(filename.stem, stages),
+        scaler=(filename.stem, scaler)
     )
