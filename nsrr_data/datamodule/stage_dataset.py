@@ -75,14 +75,8 @@ class SleepStageDataset(Dataset):
         self.index_to_record = [sub for s in sorted_data for sub in s["index_to_record"][1]]
         self.metadata = dict([s["metadata"] for s in sorted_data])
         self.stages = dict([s["stages"] for s in sorted_data])
-        self.scaler = dict([s['scaler'] for s in sorted_data])
-        self.label_key = {
-            0: 'Wake',
-            1: 'N1',
-            2: 'N2',
-            3: 'N3',
-            4: 'REM'
-        }
+        self.scaler = dict([s["scaler"] for s in sorted_data])
+        self.label_key = {0: "Wake", 1: "N1", 2: "N2", 3: "N3", 4: "REM"}
 
     def __len__(self):
         return len(self.index_to_record)
@@ -99,9 +93,7 @@ class SleepStageDataset(Dataset):
         # Potentially scale data
         if self.scaler[record]:
             signal = rearrange(
-                self.scaler[record].transform(
-                    rearrange(signal, 'N C T -> (T N) C')
-                ), '(T N) C -> N C T'
+                self.scaler[record].transform(rearrange(signal, "N C T -> (T N) C")), "(T N) C -> N C T", N=N, C=C, T=T
             )
 
         # Get valid stages
@@ -127,9 +119,7 @@ def get_record_metadata(filename: str, sequence_length: int, scaling: Optional[s
 
         # Possibly get scaling object
         if scaling:
-            scaler = SCALERS[scaling].fit(
-                rearrange(h5['data']['unscaled'][:], 'N C T -> (T N) C')
-            )
+            scaler = SCALERS[scaling].fit(rearrange(h5["data"]["unscaled"][:], "N C T -> (T N) C", N=N, C=C, T=T))
         else:
             scaler = None
 
@@ -144,5 +134,5 @@ def get_record_metadata(filename: str, sequence_length: int, scaling: Optional[s
         index_to_record=(filename.stem, index_to_record),
         metadata=(filename.stem, metadata),
         stages=(filename.stem, stages),
-        scaler=(filename.stem, scaler)
+        scaler=(filename.stem, scaler),
     )
