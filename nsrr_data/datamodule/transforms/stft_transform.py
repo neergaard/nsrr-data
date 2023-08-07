@@ -1,5 +1,5 @@
 from functools import partial
-from typing import List
+from typing import List, Optional
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -50,9 +50,8 @@ class STFTTransform:
         F = self.nfft // 2 + 1
         return [F, T]
 
-    def __call__(self, X: np.ndarray, annotations: np.ndarray) -> np.ndarray:
-
+    def __call__(self, X: np.ndarray, annotations: Optional[np.ndarray] = None) -> np.ndarray:
         Zxx = np.abs(self.transform_fn(X)) ** 2
-        Zxx = librosa.power_to_db(Zxx, top_db=50) / 50
+        Zxx = librosa.power_to_db(Zxx)
 
-        return Zxx
+        return Zxx[:, :, 1:]  # Remove DC component
